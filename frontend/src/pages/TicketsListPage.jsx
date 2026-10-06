@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { searchTickets, exportCsvUrl } from '../services/ticketService.js';
+import { searchTickets, downloadTicketsCsv } from '../services/ticketService.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useDebounce } from '../hooks/useDebounce.js';
 import TicketTable from '../components/TicketTable.jsx';
@@ -18,6 +18,8 @@ export default function TicketsListPage() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState(null);
 
   const debouncedQuery = useDebounce(query, 350);
 
@@ -44,6 +46,18 @@ export default function TicketsListPage() {
     };
   }, [debouncedQuery, status, page]);
 
+  const handleExport = async () => {
+    setExportError(null);
+    setIsExporting(true);
+    try {
+      await downloadTicketsCsv();
+    } catch (err) {
+      setExportError(err.message || 'Could not export tickets.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -56,12 +70,18 @@ export default function TicketsListPage() {
             + Create Ticket
           </Button>
           {isManagerOrAdmin && (
-            <Button as="a" href={exportCsvUrl()} variant="secondary">
+            <Button variant="secondary" onClick={handleExport} isLoading={isExporting}>
               Export CSV
             </Button>
           )}
         </div>
       </div>
+
+      {exportError && (
+        <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {exportError}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-3">
         <div className="min-w-[220px] flex-1">
